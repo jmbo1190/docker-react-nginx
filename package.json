@@ -1,0 +1,16 @@
+{
+  "name": "docker-react-nginx",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down -v",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "npm run docker:down && npm run docker:up",
+    "test": "npm run test:api && npm run test:react-app-1 && npm run test:react-app-2",
+    "test:api": "cd api && npm test",
+    "test:react-app-1": "cd react-app-1 && npm test",
+    "test:react-app-2": "cd react-app-2 && npm test"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "tests/api.test.sh",
+    "docker:build": "docker-compose build api",
+    "docker:up": "docker-compose up -d api",
+    "docker:down": "docker-compose down api",
+    "docker:logs": "docker-compose logs -f api",
+    "health": "curl -f http://localhost:5000/health"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}

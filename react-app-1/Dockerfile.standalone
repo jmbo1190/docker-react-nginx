@@ -1,0 +1,40 @@
+# react-app-1/Dockerfile.standalone
+
+# Build stage - compile the React application
+FROM node:18 AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# Final stage - create self-contained nginx image with build output
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
+# Optional: copy custom nginx config if needed
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# This standalone version creates a self-contained deployable image that includes:
+# 1. The React application build output
+# 2. An nginx server to serve the static files
+#
+# Use cases:
+# 1. Local testing:
+#    docker build -t react-app-1-standalone -f Dockerfile.standalone .
+#    docker run -p 8080:80 react-app-1-standalone
+#    Visit http://localhost:8080
+#
+# 2. CI/CD deployment:
+#    - Build: docker build -t react-app-1-standalone -f Dockerfile.standalone .
+#    - Push to registry: docker push <registry>/<image-name>
+#    - Deploy to Kubernetes/cloud platform
+#
+# 3. Team sharing:
+#    - Build: docker build -t react-app-1-standalone -f Dockerfile.standalone .
+#    - Save: docker save -o react-app-1-standalone.tar react-app-1-standalone
+#    - Share the .tar file
+#    - Load: docker load -i react-app-1-standalone.tar
+#    - Run: docker run -p 8080:80 react-app-1-standalone
+#
+# Note: This differs from the main Dockerfile which creates a build-only image
+# for use with the docker-compose setup where nginx is a separate service.
