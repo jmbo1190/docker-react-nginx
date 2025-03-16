@@ -267,13 +267,102 @@ npm run docker:build && npm run docker:restart
    ```
 
 3. CI/CD Pipeline
-// ...existing code...
 
 ### Long Term
 1. Load balancing configuration
 2. High availability setup
 3. Performance optimization
 4. Security hardening
+
+## Adding a New React App
+
+### Naming Convention
+App names must:
+- Start with a letter
+- Contain only letters, numbers, or hyphens
+- Be lowercase (recommended)
+- Cannot start with "api" (reserved for API endpoints)
+- Examples: 
+  - ✅ `dashboard`, `user-profile`, `analytics-v2`
+  - ❌ `api-dashboard` (starts with "api")
+  - ❌ `123-app` (starts with number)
+  - ❌ `My_App` (contains underscore)
+
+### Technical Details
+The nginx configuration reserves the `/api` path for backend services. Your app name will be used in URLs:
+- Main app: `http://localhost/<app-name>/`
+- Static files: `http://localhost/<app-name>/static/*`
+- WebSocket: `http://localhost/<app-name>/ws`
+
+### Steps to Add a New App
+1. Create the app using Create React App with TypeScript:
+```bash
+npx create-react-app my-feature --template typescript
+```
+
+2. Add a Dockerfile in your app directory:
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+3. Add the service to `docker-compose.yml`:
+```yaml
+services:
+  my-feature:
+    build: 
+      context: ./my-feature
+      target: development
+    volumes:
+      - ./my-feature:/app
+      - /app/node_modules
+    ports:
+      - "3000"
+    environment:
+      - REACT_APP_API_URL=/api
+```
+
+4. No nginx configuration needed! The generic configuration automatically handles:
+- Main route: `http://localhost/my-feature/`
+- Static files: `http://localhost/my-feature/static/*`
+- WebSocket: `http://localhost/my-feature/ws`
+
+5. Update your React app's package.json:
+```json
+{
+  "name": "my-feature",
+  "homepage": "/my-feature"
+}
+```
+
+6. Start the services:
+```bash
+docker compose up --build
+```
+
+Your new app will be available at `http://localhost/my-feature/`
+
+### Verification Steps
+1. Check nginx configuration:
+```bash
+docker compose exec nginx nginx -t
+```
+
+2. Test the endpoints:
+```bash
+curl -I http://localhost/my-feature/
+curl -I http://localhost/my-feature/static/css/main.css
+```
+
+3. Monitor logs:
+```bash
+docker compose logs -f my-feature
+```
 
 ## Contributing
 
