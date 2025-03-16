@@ -20,6 +20,54 @@ check_containers() {
     return $running
 }
 
+# Wait for service function
+wait_for_service() {
+    local service_name=$1
+    local health_url=$2
+    local expected_content=$3
+    local max_attempts=30
+
+    echo "Waiting for $service_name..."
+    for i in $(seq 1 $max_attempts); do
+        if curl -s "$health_url" | grep -q "$expected_content"; then
+            echo -e "${GREEN}✓ $service_name is ready${NC}"
+            return 0
+        fi
+        echo "Waiting... ($i/$max_attempts)"
+        sleep 2
+    done
+    echo -e "${RED}✗ $service_name failed to start${NC}"
+    return 1
+}
+
+# Verify all services are accessible
+verify_services() {
+    echo "Verifying services..."
+    
+    # Test API endpoints
+    if ! wait_for_service "API" "$API_URL/health" "healthy"; then
+        echo -e "${RED}✗ API health check failed${NC}"
+        return 1
+    fi
+    
+    # Test Counter app
+    if ! wait_for_service "Test Counter" "http://localhost/test-counter/" "Test Counter"; then
+        echo -e "${RED}✗ Test Counter app not accessible${NC}"
+        docker compose -f "$COMPOSE_FILE" logs test-counter
+        return 1
+    fi
+    
+    # Test API Client app
+    if ! wait_for_service "Test API Client" "http://localhost/test-api-client/" "Test API Client"; then
+        echo -e "${RED}✗ Test API Client app not accessible${NC}"
+        docker compose -f "$COMPOSE_FILE" logs test-api-client
+        return 1
+    fi
+    
+    echo -e "${GREEN}✓ All services verified${NC}"
+    return 0
+}
+
 # Start containers function
 start_containers() {
     echo "Ensuring clean environment..."
@@ -28,6 +76,17 @@ start_containers() {
     echo "Starting containers..."
     if ! docker compose -f "$COMPOSE_FILE" up -d --force-recreate; then
         echo -e "${RED}Error: Failed to start containers${NC}"
+        return 1
+    fi
+
+    # Give containers time to initialize
+    sleep 5
+
+    echo "Verifying services..."
+    if ! verify_services; then
+        echo -e "${RED}Error: Service verification failed${NC}"
+        echo "Container logs:"
+        docker compose -f "$COMPOSE_FILE" logs
         return 1
     fi
 }

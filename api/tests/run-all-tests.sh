@@ -6,8 +6,24 @@ RED='\033[0;31m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+# Set paths
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+COMPOSE_FILE="${PROJECT_ROOT}/config/dev/docker-compose.yml"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Export compose file path for child scripts
+export COMPOSE_FILE
+
+cd "${BASE_DIR}"
+
 echo -e "${BOLD}Running all API tests${NC}"
 echo "=========================="
+
+# Verify docker-compose.yml exists
+if [ ! -f "$COMPOSE_FILE" ]; then
+    echo -e "${RED}Error: docker-compose.yml not found at ${COMPOSE_FILE}${NC}"
+    exit 1
+fi
 
 # Run integrated tests (with nginx)
 echo -e "\n${BOLD}1. Running integrated tests (with nginx)${NC}"

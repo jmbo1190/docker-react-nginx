@@ -1,21 +1,24 @@
 #!/bin/bash
-# filepath: docker-react-nginx/api/tests/api.test.sh
-# Test the Express API endpoints using curl
-# Note: This script uses the jq and json_pp commands to parse JSON responses
-# Note: This script requires Docker Compose to be running the express-api container
 
 # Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-API_URL="http://localhost/api"  # Using nginx proxy from docker-compose
-COMPOSE_PROJECT="docker-react-nginx"
+# Use COMPOSE_FILE from parent script or set default
+COMPOSE_FILE=${COMPOSE_FILE:-"../../config/dev/docker-compose.yml"}
+API_URL="http://localhost/api"
+
+# Verify compose file exists
+if [ ! -f "$COMPOSE_FILE" ]; then
+    echo -e "${RED}Error: docker-compose.yml not found at ${COMPOSE_FILE}${NC}"
+    exit 1
+fi
 
 # Cleanup function
 cleanup() {
     echo -e "\n=== Cleaning Up ==="
-    docker compose -f ../config/dev/docker-compose.yml down
+    docker compose -f "$COMPOSE_FILE" down
 }
 
 # Set trap for cleanup on script exit
@@ -35,7 +38,7 @@ echo "=== Setting Up Test Environment ==="
 
 # Start the containers using docker-compose
 echo "Starting containers..."
-if ! docker compose -f ../config/dev/docker-compose.yml up -d; then
+if ! docker compose -f "$COMPOSE_FILE" up -d; then
     echo -e "${RED}Error: Failed to start containers${NC}"
     exit 1
 fi

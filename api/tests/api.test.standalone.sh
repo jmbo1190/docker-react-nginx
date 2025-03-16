@@ -97,42 +97,42 @@ echo "=== Testing API Endpoints ==="
 
 # Test GET all items
 echo -e "\n1. Testing GET /api/items"
-response=$(curl -s -X GET "$API_URL/api/items")
+response=$(curl -s -X GET "$API_URL/items")
 echo "$response" | json_pp
 if [[ $(echo "$response" | jq length) -ge 2 ]]; then
-    echo -e "${GREEN}✓ GET /api/items returned at least 2 items${NC}"
+    echo -e "${GREEN}✓ GET /items returned at least 2 items${NC}"
 else
-    echo -e "${RED}✗ GET /api/items failed${NC}"
+    echo -e "${RED}✗ GET /items failed${NC}"
     exit 1
 fi
 
 # Test GET single item
 echo -e "\n2. Testing GET /api/items/1"
-response=$(curl -s -X GET "$API_URL/api/items/1")
+response=$(curl -s -X GET "$API_URL/items/1")
 echo "$response" | json_pp
 if [[ $(echo "$response" | jq -r '.id') == "1" ]]; then
-    echo -e "${GREEN}✓ GET /api/items/1 returned correct item${NC}"
+    echo -e "${GREEN}✓ GET /items/1 returned correct item${NC}"
 else
-    echo -e "${RED}✗ GET /api/items/1 failed${NC}"
+    echo -e "${RED}✗ GET /items/1 failed${NC}"
     exit 1
 fi
 
 # Test POST new item
 echo -e "\n3. Testing POST /api/items"
-response=$(curl -s -X POST "$API_URL/api/items" \
+response=$(curl -s -X POST "$API_URL/items" \
     -H "Content-Type: application/json" \
     -d '{"name": "Test Item"}')
 echo "$response" | json_pp
 if [[ $(echo "$response" | jq -r '.name') == "Test Item" ]]; then
-    echo -e "${GREEN}✓ POST /api/items created new item${NC}"
+    echo -e "${GREEN}✓ POST /items created new item${NC}"
 else
-    echo -e "${RED}✗ POST /api/items failed${NC}"
+    echo -e "${RED}✗ POST /items failed${NC}"
     exit 1
 fi
 
 # Verify new item in list
-echo -e "\n4. Verifying new item in GET /api/items"
-response=$(curl -s -X GET "$API_URL/api/items")
+echo -e "\n4. Verifying new item in GET /items"
+response=$(curl -s -X GET "$API_URL/items")
 echo "$response" | json_pp
 if [[ $(echo "$response" | jq 'map(select(.name == "Test Item")) | length') -eq 1 ]]; then
     echo -e "${GREEN}✓ New item found in list${NC}"

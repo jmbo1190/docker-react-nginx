@@ -1,5 +1,9 @@
 # Base stage for both development and production
 FROM node:18-alpine AS base
+
+# Install health check tools
+RUN apk add --no-cache curl wget
+
 WORKDIR /app
 COPY package*.json ./
 
