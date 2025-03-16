@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-API_PORT=5000
+API_PORT=5001  # Changed to avoid conflict with integrated tests
 CONTAINER_NAME=express-api-test
 API_URL="http://localhost:${API_PORT}"
 
@@ -109,62 +109,77 @@ test_endpoint() {
     
     local response
     if [ "$method" == "POST" ]; then
-        response=$(curl -s -w "\n%{http_code}" -X POST \
+        response=$(curl -s -X POST \
             -H "Content-Type: application/json" \
             -d "${data}" \
             "$API_URL$endpoint")
+        local status_code=$?
     else
-        response=$(curl -s -w "\n%{http_code}" "$API_URL$endpoint")
+        response=$(curl -s -X "$method" "$API_URL$endpoint")
+        local status_code=$?
     fi
     
-    local status_code=$(echo "$response" | tail -n1)
-    local body=$(echo "$response" | sed \$d)
-    
-    echo "Response (Status: $status_code):"
-    echo "$body" | json_pp
-    
-    if [ "$status_code" -eq "$expected_status" ]; then
-        echo -e "${GREEN}✓ $description succeeded${NC}"
-        echo "$body"  # Return response body for further processing
-        return 0
-    else
-        echo -e "${RED}✗ $description failed${NC}"
+    echo "Response:"
+    if ! echo "$response" | jq . >/dev/null 2>&1; then
+        echo -e "${RED}Error: Invalid JSON response${NC}"
+        echo "Raw response: $response"
         return 1
     fi
+
+    echo "$response" | jq .
+    return 0
 }
 
 # Test Cases
-test_endpoint "GET" "/items" 200 "" "Get all items" || exit 1
-test_endpoint "GET" "/items/1" 200 "" "Get item by ID" || exit 1
+echo "=== Testing API Endpoints ==="
 
-# Create new item and capture response
-echo -e "\nTesting: Create new item"
-create_response=$(curl -s -X POST \
+# Test GET all items
+echo -e "\nTesting GET /items"
+response=$(curl -s -X GET "$API_URL/items")
+if ! echo "$response" | jq . >/dev/null 2>&1; then
+    echo -e "${RED}Error: Invalid JSON response${NC}"
+    echo "Raw response: $response"
+    exit 1
+fi
+
+items_count=$(echo "$response" | jq '. | length')
+if [ "$items_count" -lt 2 ]; then
+    echo -e "${RED}✗ Expected at least 2 items, got $items_count${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✓ Got $items_count items${NC}"
+
+# Test GET single item
+echo -e "\nTesting GET /items/1"
+response=$(curl -s -X GET "$API_URL/items/1")
+if ! echo "$response" | jq -e '.id == 1' >/dev/null; then
+    echo -e "${RED}✗ Failed to get item 1${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✓ Successfully retrieved item 1${NC}"
+
+# Test POST new item
+echo -e "\nTesting POST /items"
+response=$(curl -s -X POST \
     -H "Content-Type: application/json" \
     -d '{"name":"Test Item"}' \
     "$API_URL/items")
 
-echo "Create response:"
-echo "$create_response" | json_pp
-
-# Extract new item ID
-new_item_id=$(echo "$create_response" | jq -r '.id')
-if [ -z "$new_item_id" ] || [ "$new_item_id" = "null" ]; then
-    echo -e "${RED}✗ Failed to get new item ID${NC}"
+if ! echo "$response" | jq -e '.name == "Test Item"' >/dev/null; then
+    echo -e "${RED}✗ Failed to create new item${NC}"
     exit 1
 fi
 
-# Verify new item
-echo -e "\nTesting: Verify created item"
-verify_response=$(curl -s -X GET "$API_URL/items/$new_item_id")
-echo "Verify response:"
-echo "$verify_response" | json_pp
+new_item_id=$(echo "$response" | jq '.id')
+echo -e "${GREEN}✓ Created new item with ID $new_item_id${NC}"
 
-if [ "$(echo "$verify_response" | jq -r '.name')" = "Test Item" ]; then
-    echo -e "${GREEN}✓ New item verified${NC}"
-else
-    echo -e "${RED}✗ New item verification failed${NC}"
+# Verify new item exists
+echo -e "\nVerifying new item"
+response=$(curl -s -X GET "$API_URL/items/$new_item_id")
+if ! echo "$response" | jq -e '.name == "Test Item"' >/dev/null; then
+    echo -e "${RED}✗ Failed to verify new item${NC}"
     exit 1
 fi
+echo -e "${GREEN}✓ New item verified${NC}"
 
 echo -e "\n${GREEN}${BOLD}All tests passed successfully!${NC}"
