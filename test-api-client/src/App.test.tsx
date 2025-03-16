@@ -4,9 +4,9 @@ import '@testing-library/jest-dom';
 import App from './App';
 
 describe('App', () => {
-  test('renders React App 2 heading', () => {
+  test('renders Test API Client (React App) heading', () => {
     render(<App />);
-    const headingElement = screen.getByText(/React App 2/i);
+    const headingElement = screen.getByText(/Test API Client \(React App\)/i);
     expect(headingElement).toBeInTheDocument();
   });
 });

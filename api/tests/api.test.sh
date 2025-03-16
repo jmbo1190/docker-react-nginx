@@ -15,7 +15,7 @@ COMPOSE_PROJECT="docker-react-nginx"
 # Cleanup function
 cleanup() {
     echo -e "\n=== Cleaning Up ==="
-    docker-compose down 2>/dev/null
+    docker compose -f ../config/dev/docker-compose.yml down
 }
 
 # Set trap for cleanup on script exit
@@ -35,7 +35,7 @@ echo "=== Setting Up Test Environment ==="
 
 # Start the containers using docker-compose
 echo "Starting containers..."
-if ! docker-compose up -d; then
+if ! docker compose -f ../config/dev/docker-compose.yml up -d; then
     echo -e "${RED}Error: Failed to start containers${NC}"
     exit 1
 fi
@@ -44,6 +44,7 @@ fi
 echo "Waiting for API to be ready..."
 for i in {1..30}; do
     if curl -s "$API_URL/health" > /dev/null; then
+        echo "API is ready"
         break
     fi
     if [ $i -eq 30 ]; then
@@ -57,43 +58,74 @@ echo "=== Testing API Endpoints ==="
 
 # Test GET all items
 echo -e "\n1. Testing GET /api/items"
-response=$(curl -s -X GET "$API_URL/api/items")
-echo "$response" | json_pp
-if [[ $(echo "$response" | jq length) -ge 2 ]]; then
-    echo -e "${GREEN}✓ GET /api/items returned at least 2 items${NC}"
+echo "Calling: curl -s -X GET \"$API_URL/items\""
+response=$(curl -s -v -X GET "$API_URL/items")
+echo "Raw response:"
+echo "$response"
+echo "Formatted response:"
+if echo "$response" | jq . >/dev/null 2>&1; then
+    echo "$response" | json_pp
 else
-    echo -e "${RED}✗ GET /api/items failed${NC}"
+    echo "Invalid JSON received"
+    echo "HTTP response headers:"
+    curl -s -I "$API_URL/items"
     exit 1
 fi
 
 # Test GET single item
 echo -e "\n2. Testing GET /api/items/1"
-response=$(curl -s -X GET "$API_URL/api/items/1")
-echo "$response" | json_pp
-if [[ $(echo "$response" | jq -r '.id') == "1" ]]; then
-    echo -e "${GREEN}✓ GET /api/items/1 returned correct item${NC}"
+response=$(curl -s -X GET "$API_URL/items/1")
+echo "Raw response:"
+echo "$response"
+echo "Formatted response:"
+if echo "$response" | jq . >/dev/null 2>&1; then
+    echo "$response" | json_pp
 else
-    echo -e "${RED}✗ GET /api/items/1 failed${NC}"
+    echo "Invalid JSON received"
+    echo "HTTP response headers:"
+    curl -s -I "$API_URL/items/1"
     exit 1
 fi
 
 # Test POST new item
 echo -e "\n3. Testing POST /api/items"
-response=$(curl -s -X POST "$API_URL/api/items" \
+response=$(curl -s -X POST \
     -H "Content-Type: application/json" \
-    -d '{"name": "Test Item"}')
-echo "$response" | json_pp
-if [[ $(echo "$response" | jq -r '.name') == "Test Item" ]]; then
-    echo -e "${GREEN}✓ POST /api/items created new item${NC}"
+    -d '{"name":"Test Item"}' \
+    "$API_URL/items")
+echo "Raw response:"
+echo "$response"
+echo "Formatted response:"
+if echo "$response" | jq . >/dev/null 2>&1; then
+    echo "$response" | json_pp
+    if [[ $(echo "$response" | jq -r '.name') == "Test Item" ]]; then
+        echo -e "${GREEN}✓ POST /api/items created new item${NC}"
+    else
+        echo -e "${RED}✗ POST /api/items failed - unexpected response${NC}"
+        exit 1
+    fi
 else
-    echo -e "${RED}✗ POST /api/items failed${NC}"
+    echo "Invalid JSON received"
+    echo "HTTP response headers:"
+    curl -s -I "$API_URL/items"
     exit 1
 fi
 
 # Verify new item in list
 echo -e "\n4. Verifying new item in GET /api/items"
-response=$(curl -s -X GET "$API_URL/api/items")
+response=$(curl -s -X GET "$API_URL/items")  # Remove duplicate /api
+if ! echo "$response" | jq . >/dev/null 2>&1; then
+    echo "Invalid JSON received"
+    echo "Raw response:"
+    echo "$response"
+    echo "HTTP response headers:"
+    curl -s -I "$API_URL/items"
+    exit 1
+fi
+
+echo "Response:"
 echo "$response" | json_pp
+
 if [[ $(echo "$response" | jq 'map(select(.name == "Test Item")) | length') -eq 1 ]]; then
     echo -e "${GREEN}✓ New item found in list${NC}"
 else

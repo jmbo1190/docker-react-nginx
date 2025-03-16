@@ -4,9 +4,9 @@ import '@testing-library/jest-dom';
 import App from './App';
 
 describe('App', () => {
-  test('renders React App 1 heading', () => {
+  test('renders Test Counter (React App) heading', () => {
     render(<App />);
-    const headingElement = screen.getByText(/React App 1/i);
+    const headingElement = screen.getByText(/Test Counter \(React App\)/i);
     expect(headingElement).toBeInTheDocument();
   });
 });

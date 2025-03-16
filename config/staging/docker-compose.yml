@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  nginx:
+    build: ./nginx
+    ports:
+      - "8443:443"
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.staging.conf:/etc/nginx/nginx.conf:ro
+      - /path/to/ssl/certificates:/etc/ssl/private:ro
+    environment:
+      - NODE_ENV=staging
