@@ -1,2 +1,4 @@
 config/*/.env
 ssl/
+api/2
+api/test-output.log

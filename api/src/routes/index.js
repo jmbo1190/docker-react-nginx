@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const externalRoutes = require('./external');
+const { createRouter: createJsonPlaceholderRouter } = require('./jsonPlaceholder');
+const jsonPlaceholderApi = require('../services/jsonPlaceholderApi');
 
 // Sample data
 let items = [
@@ -21,6 +24,14 @@ router.get('/items/:id', (req, res) => {
 
 // POST /api/items
 router.post('/items', (req, res) => {
+  // Validate required fields
+  if (!req.body.name || typeof req.body.name !== 'string') {
+    return res.status(400).json({ 
+      error: 'Validation error',
+      message: 'Name is required and must be a string' 
+    });
+  }
+
   const item = {
     id: items.length + 1,
     name: req.body.name
@@ -50,5 +61,11 @@ router.post('/reset', (req, res) => {
     ];
     res.json({ message: 'Data reset to initial state' });
 });
+
+// Add external API routes
+router.use('/external', externalRoutes);
+
+// Create and mount JsonPlaceholder router with API instance
+router.use('/jsonplaceholder', createJsonPlaceholderRouter(jsonPlaceholderApi));
 
 module.exports = router;

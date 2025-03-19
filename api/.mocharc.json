@@ -1,0 +1,8 @@
+{
+  "recursive": true,
+  "timeout": 5000,
+  "exit": true,
+  "reporter": "spec",
+  "ui": "bdd",
+  "experimental-specifier-resolution": "node"
+}

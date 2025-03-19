@@ -23,23 +23,28 @@ services:
     build: 
       context: ../../api
       target: development
-    ports:
-      - "${API_PORT:-5000}:5000"
     volumes:
       - ../../api:/usr/src/app:delegated
       - /usr/src/app/node_modules
     environment:
       - NODE_ENV=development
       - PORT=5000
+      - EXTERNAL_API_URL=https://jsonplaceholder.typicode.com
+      - API_VERSION=1.0.0
+      - DEBUG=express:*
+    ports:
+      - "5001:5000"  # Expose port for debugging - Map container's 5000 to host's 5001 since port 5000 may be in use by macOS ControlCenter
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:5000/health || exit 1"]
+      test: [
+        "CMD-SHELL",
+        "wget --spider -q http://localhost:5000/health || (echo 'Health check failed' && exit 1)"
+      ]
       interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 15s  # Reduced start period
-    # Add restart policy
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
   test-counter:
