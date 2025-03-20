@@ -8,9 +8,11 @@
 # Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m'
 
-API_PORT=5000
+API_PORT=5001  # Changed to avoid conflict with integrated tests
 CONTAINER_NAME=express-api-test
 API_URL="http://localhost:${API_PORT}"
 
@@ -95,50 +97,89 @@ done
 
 echo "=== Testing API Endpoints ==="
 
+# Test endpoint function for reusability
+test_endpoint() {
+    local method=$1
+    local endpoint=$2
+    local expected_status=$3
+    local data=$4
+    local description=$5
+    
+    echo -e "\nTesting: ${description:-$method $endpoint}"
+    
+    local response
+    if [ "$method" == "POST" ]; then
+        response=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "${data}" \
+            "$API_URL$endpoint")
+        local status_code=$?
+    else
+        response=$(curl -s -X "$method" "$API_URL$endpoint")
+        local status_code=$?
+    fi
+    
+    echo "Response:"
+    if ! echo "$response" | jq . >/dev/null 2>&1; then
+        echo -e "${RED}Error: Invalid JSON response${NC}"
+        echo "Raw response: $response"
+        return 1
+    fi
+
+    echo "$response" | jq .
+    return 0
+}
+
+# Test Cases
+echo "=== Testing API Endpoints ==="
+
 # Test GET all items
-echo -e "\n1. Testing GET /api/items"
-response=$(curl -s -X GET "$API_URL/api/items")
-echo "$response" | json_pp
-if [[ $(echo "$response" | jq length) -ge 2 ]]; then
-    echo -e "${GREEN}✓ GET /api/items returned at least 2 items${NC}"
-else
-    echo -e "${RED}✗ GET /api/items failed${NC}"
+echo -e "\nTesting GET /items"
+response=$(curl -s -X GET "$API_URL/items")
+if ! echo "$response" | jq . >/dev/null 2>&1; then
+    echo -e "${RED}Error: Invalid JSON response${NC}"
+    echo "Raw response: $response"
     exit 1
 fi
+
+items_count=$(echo "$response" | jq '. | length')
+if [ "$items_count" -lt 2 ]; then
+    echo -e "${RED}✗ Expected at least 2 items, got $items_count${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✓ Got $items_count items${NC}"
 
 # Test GET single item
-echo -e "\n2. Testing GET /api/items/1"
-response=$(curl -s -X GET "$API_URL/api/items/1")
-echo "$response" | json_pp
-if [[ $(echo "$response" | jq -r '.id') == "1" ]]; then
-    echo -e "${GREEN}✓ GET /api/items/1 returned correct item${NC}"
-else
-    echo -e "${RED}✗ GET /api/items/1 failed${NC}"
+echo -e "\nTesting GET /items/1"
+response=$(curl -s -X GET "$API_URL/items/1")
+if ! echo "$response" | jq -e '.id == 1' >/dev/null; then
+    echo -e "${RED}✗ Failed to get item 1${NC}"
     exit 1
 fi
+echo -e "${GREEN}✓ Successfully retrieved item 1${NC}"
 
 # Test POST new item
-echo -e "\n3. Testing POST /api/items"
-response=$(curl -s -X POST "$API_URL/api/items" \
+echo -e "\nTesting POST /items"
+response=$(curl -s -X POST \
     -H "Content-Type: application/json" \
-    -d '{"name": "Test Item"}')
-echo "$response" | json_pp
-if [[ $(echo "$response" | jq -r '.name') == "Test Item" ]]; then
-    echo -e "${GREEN}✓ POST /api/items created new item${NC}"
-else
-    echo -e "${RED}✗ POST /api/items failed${NC}"
+    -d '{"name":"Test Item"}' \
+    "$API_URL/items")
+
+if ! echo "$response" | jq -e '.name == "Test Item"' >/dev/null; then
+    echo -e "${RED}✗ Failed to create new item${NC}"
     exit 1
 fi
 
-# Verify new item in list
-echo -e "\n4. Verifying new item in GET /api/items"
-response=$(curl -s -X GET "$API_URL/api/items")
-echo "$response" | json_pp
-if [[ $(echo "$response" | jq 'map(select(.name == "Test Item")) | length') -eq 1 ]]; then
-    echo -e "${GREEN}✓ New item found in list${NC}"
-else
-    echo -e "${RED}✗ New item not found in list${NC}"
+new_item_id=$(echo "$response" | jq '.id')
+echo -e "${GREEN}✓ Created new item with ID $new_item_id${NC}"
+
+# Verify new item exists
+echo -e "\nVerifying new item"
+response=$(curl -s -X GET "$API_URL/items/$new_item_id")
+if ! echo "$response" | jq -e '.name == "Test Item"' >/dev/null; then
+    echo -e "${RED}✗ Failed to verify new item${NC}"
     exit 1
 fi
+echo -e "${GREEN}✓ New item verified${NC}"
 
-echo -e "\n${GREEN}All tests passed successfully!${NC}"
+echo -e "\n${GREEN}${BOLD}All tests passed successfully!${NC}"

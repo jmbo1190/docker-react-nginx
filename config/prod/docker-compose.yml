@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - /path/to/ssl/certificates:/etc/ssl/private:ro
+    depends_on:
+      - react-app-1
+      - react-app-2
+      - api
+
+  # Production-specific service configurations
+  react-app-1:
+    build: 
+      context: ./react-app-1
+      target: production
+    environment:
+      - NODE_ENV=production

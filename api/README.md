@@ -14,6 +14,26 @@
 - `npm run docker:down` - Stops and removes the API container
 - `npm run docker:logs` - Shows and follows the API container logs
 
+## Available Endpoints
+
+### Health Checks
+- `GET /health` - Basic health check
+- `GET /health/timestamp` - Health check with timestamp
+
+### Items API
+- `GET /items` - List all items
+- `GET /items/:id` - Get single item
+- `POST /items` - Create new item
+- `PUT /items/:id` - Update an item
+- `DELETE /items/:id` - Delete an item
+- `POST /reset` - Reset items to initial state
+
+### JSONPlaceholder Integration
+- `GET /jsonplaceholder/posts` - List all posts
+- `GET /jsonplaceholder/posts/:id` - Get single post
+- `POST /jsonplaceholder/posts` - Create new post
+- `GET /jsonplaceholder/posts/:id/comments` - Get post comments
+
 ## Usage Example
 
 ```bash
@@ -25,6 +45,9 @@ npm run docker:logs
 
 # Rebuild after changes
 npm run docker:build && npm run docker:up
+
+# Test JSONPlaceholder integration
+curl http://localhost/api/jsonplaceholder/posts
 ```
 
 ## Health Check

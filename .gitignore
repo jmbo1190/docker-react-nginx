@@ -1,8 +1,10 @@
 api/2
-test-api-client/build/
 **/node_modules/
 **/dist/
 **/build/
 **/coverage/
 **/*.log
 **/.env
+config/*/.env
+ssl/
+api/2
